@@ -8,13 +8,15 @@
     "bin/",
     "lib/",
     "hooks/",
+    ".mcp.json",
     "scripts/pb-hook.mjs",
     "scripts/generate-manifests.mjs",
     "integrations/",
     "skills/",
     ".claude-plugin/",
     "models/",
-    "docs/"
+    "docs/",
+    "AGENTS.md"
   ],
   "engines": { "node": ">=18" },
   "exports": {

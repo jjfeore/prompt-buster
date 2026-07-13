@@ -1,0 +1,3 @@
+name: prompt-buster
+version: 0.1.0
+description: Route Hermes web-tool results through the PromptBuster prompt-injection firewall.
