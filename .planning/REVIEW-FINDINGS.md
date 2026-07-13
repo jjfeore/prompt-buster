@@ -79,3 +79,39 @@ response; "DOCUMENTED" means an accepted trade-off recorded in DECISIONS.md.
     D-23 + docs: `setup wolf` is an explicit opt-in that DOES run
     onnxruntime-node's postinstall (required for the CPU binary); the zero-dep
     posture is about the BASE package. Disclosed in README/THREAT-MODEL.
+
+## Second round — adversarial CODE review (11 confirmed of 12 raised)
+
+A second workflow reviewed the actual implementation (not the spec) across 4
+areas, each finding adversarially verified against the code. All 11 confirmed
+defects FIXED with regression tests (suite now 90 tests):
+
+- **[high] `recordDecision` clobbered denials over a corrupt decisions file** —
+  it ignored the `corrupt` flag `checkDecision` honored, so an unrelated
+  release after corruption atomically overwrote the file, permanently wiping
+  every human deny (fail-open of a security control). Now refuses to write over
+  a corrupt file and surfaces the error.
+- **[high] `centerWindow` reviewed only head+tail** — a mid-document injection
+  was invisible to the stage-3 reviewer and got cleared. Replaced with
+  `reviewWindows`: every region is reviewed (bounded to 4 windows); any window
+  escalates → escalate; over-budget content escalates the un-reviewed remainder.
+- **[high] Wolf model renamed into place BEFORE sha256 verify** — defeated the
+  pin on next load. Now verifies the `.part` temp file (size + sha256) then
+  renames; a streamed byte cap prevents disk-exhaustion by a malicious mirror.
+- **[medium] `parseVerdict` took the FIRST JSON object** — a planted `allow` in
+  echoed hostile content could override the reviewer's real `escalate`. Now
+  considers every verdict object; any `escalate` wins; `allow` requires all
+  present verdicts to agree.
+- **[medium] Forged-frame guard was case-sensitive** while the strip regex was
+  case-insensitive → a lowercase `[promptbuster: …]` forgery survived. Guard
+  made case-insensitive.
+- **[medium] Claude hook passed clean content through as `{}`** even when the
+  pipeline stripped a forged frame from it → the forgery survived in the
+  original tool output. Now emits `updatedToolOutput` when sanitized content
+  differs from the raw text.
+- **[medium] Installer exited 0 on a target error**, and a partial install left
+  untracked files. Now non-zero on error/refusal; rolls back written paths on
+  any failure.
+- **[low] SSRF via redirect** to loopback/private/metadata IPs — `boundedFetch`
+  now blocks those literal hosts on every hop (DNS-rebinding documented as a
+  residual). **[low] hook config-load failure** now honors fail-closed.
