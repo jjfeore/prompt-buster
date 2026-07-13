@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "model_id": "patronus-studio/wolf-defender-prompt-injection-small",
+  "revision": "fe396c647199f3c2adfe38e1a90c366a7330e42a",
+  "files": [
+    {
+      "path": "config.json",
+      "size_bytes": 1938,
+      "sha256": "ade54b8d4f35b074c04b9f1f29f30e87f9132de23a8f20e877a24c3bb5aa84f9"
+    },
+    {
+      "path": "onnx/onnx_fp16/model_fp16.onnx",
+      "size_bytes": 281744314,
+      "sha256": "856aa7a4a78f1c98c7f10ce1ed35c7cf4102749dea970a740fe654657dd92f98"
+    },
+    {
+      "path": "onnx/onnx_fp16/tokenizer.json",
+      "size_bytes": 34363287,
+      "sha256": "6b99d3bf966298a637beb18cdd0ff760c73cc6e77bf5d354fd1ce14dd164f0ff"
+    },
+    {
+      "path": "onnx/onnx_fp16/tokenizer_config.json",
+      "size_bytes": 46334,
+      "sha256": "ec208c212bcb01e0cb107b887e936100824ec843f3e0a6ff7d7df46e2a594b47"
+    },
+    {
+      "path": "onnx/onnx_fp16/special_tokens_map.json",
+      "size_bytes": 173,
+      "sha256": "97f6f6ef323755568c9dddf57b7b2bac4c2019e8c10c2ef1262001a9f6487124"
+    }
+  ]
+}
