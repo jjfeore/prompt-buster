@@ -25,7 +25,8 @@
   "scripts": {
     "generate-manifests": "node scripts/generate-manifests.mjs",
     "version": "node scripts/generate-manifests.mjs && git add .claude-plugin",
-    "test": "node --test test/"
+    "test": "node --test",
+    "pretest": "node scripts/generate-manifests.mjs --check"
   },
   "author": { "name": "James Feore" },
   "repository": { "type": "git", "url": "git+https://github.com/jjfeore/prompt-buster.git" },

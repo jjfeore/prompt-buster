@@ -1,0 +1,14 @@
+{
+  "name": "prompt-buster",
+  "owner": {
+    "name": "James Feore"
+  },
+  "plugins": [
+    {
+      "name": "prompt-buster",
+      "source": "./",
+      "description": "Local prompt-injection firewall for AI agents that browse the web: layered pre-filters (regex, LightGBM, Wolf Defender), optional LLM review, and human/agent escalation — for Claude Code, Codex, OpenClaw, Hermes, and OpenCode",
+      "version": "0.1.0"
+    }
+  ]
+}

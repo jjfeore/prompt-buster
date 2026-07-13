@@ -73,6 +73,23 @@ test("check() triggers on attacks and passes benign text", async () => {
   assert.equal(benign.findings.length, 0);
 });
 
+test("chunked production path matches Python chunk-and-max to <=1e-6", async () => {
+  const { overlappingTextChunks } = await import("../lib/chunks.js");
+  _resetCache();
+  const runner = loadModel();
+  const maxChars = runner.config.max_chars;
+  for (const sample of golden.chunked || []) {
+    let jsScore = 0;
+    for (const chunk of overlappingTextChunks(sample.text, { maxChars })) {
+      jsScore = Math.max(jsScore, runner.score(chunk.text));
+    }
+    assert.ok(
+      Math.abs(jsScore - sample.chunkedScore) <= 1e-6,
+      `chunked score differs (len ${sample.text.length}): js ${jsScore} vs py ${sample.chunkedScore}`,
+    );
+  }
+});
+
 test("check() reports model load errors instead of throwing", async () => {
   _resetCache();
   // Point the loader at a bad dir via a fake by temporarily breaking the cache path is hard;

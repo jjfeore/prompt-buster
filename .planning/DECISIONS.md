@@ -139,6 +139,57 @@ Why: James asked for an overnight build in a fresh repo; commits create
 reviewable checkpoints (and the model-handoff safety he asked for). Pushing
 is outward-facing and reserved for him.
 
+**D-19. LightGBM Unicode parity is empirically pinned, with a documented
+micro-divergence on exotic-but-harmless code points.**
+Why: the JS port must match Python's `str.isspace/isdigit/isupper/isalnum` and
+Unicode `\b`/`\w` exactly, or an attacker could shift the classifier score with
+NFD accents / CJK-adjacent keywords (a real, review-confirmed evasion: py 0.963
+vs js 0.924 before the fix). Fixed: word tokenizer and isAlnum drop `\p{M}`;
+stat regexes use explicit `[\p{L}\p{N}_]` lookarounds instead of ASCII `\b`;
+isUpper uses `\p{Uppercase}`; isDigit adds the Numeric_Type=Digit ranges. The
+golden corpus now includes one vector per hazard class (NFD, CJK+ideographic
+space, superscript/circled digits, Other_Uppercase, astral emoji, BOM, >4096
+chars) and parity holds to ≤1e-6. Residual: JS `\s` matches U+FEFF where Python
+`\s` does not — bounded, no evasion value, documented not fixed.
+
+**D-20. Wolf fail-open window is a conscious, bounded trade-off.**
+Why: fail-open (D-15) keeps a broken classifier from bricking browsing, but the
+daemon cold-start window let Wolf be skipped on the first scan. Mitigated:
+`daemon.startTimeoutMs` default raised to 8s (above the ~2-5s model load), and
+when Wolf is the deciding classifier and unavailable the short-lived fallback
+records a filter error so `failMode:"closed"` still escalates. Fail-open stays
+the default because the alternative (block all browsing when the model is
+warming) is the worse failure.
+
+**D-21. Regex-only triggers are confirmed by the stage-3 LLM review, which
+plays Abeeo's classifier-confirmation role.**
+Why: Abeeo never hard-blocks on a regex hit alone — a classifier confirms. In
+PB the LLM review is that confirmer (default on). A regex hit with no available
+reviewer AND no classifier escalates to the human/agent decision point, not a
+silent hard block — the escalation UX (allow-with-note) is the safety valve.
+Documented so the "regex alone shouldn't block" concern is deliberately
+addressed by the pipeline shape rather than by weakening regex.
+
+**D-22. Escalation default stays `interactive`; autonomous contexts select
+`agent` mode explicitly.**
+Why: block-by-default is right for an attended human but self-defeating for an
+unattended browsing fleet. Rather than guess from a TTY probe (fragile), the
+installer configures `agent` mode for autonomous/YOLO harness targets, and
+users can set `escalation.mode: "agent"`. Interactive stays the safe global
+default.
+
+**D-23. Untrusted project config is restricted to a cosmetic allowlist;
+`setup wolf` supply-chain is disclosed, not hidden.**
+Why (config): a scanned hostile repo's `.prompt-buster.json` must not be able
+to run code (command classifier) or exfiltrate keys (review egress) — the
+single worst finding. Project config now only sets `scan.*`/`log.level` unless
+`PROMPT_BUSTER_ALLOW_PROJECT_CONFIG=1`. Why (wolf): `prompt-buster setup wolf`
+runs `npm install onnxruntime-node`, whose postinstall unpacks a native binary
+— an inherent, disclosed cost of in-process ONNX inference. The zero-dependency
+guarantee is about the BASE package (regex + lightgbm work with no install);
+Wolf is an explicit opt-in with the supply-chain cost stated in README and
+THREAT-MODEL.
+
 **D-18. Corpus for self-test is hand-authored, not copied from public attack
 datasets.**
 Why: licensing cleanliness in an MIT repo and no test dependency on external

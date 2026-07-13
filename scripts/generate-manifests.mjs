@@ -1,0 +1,62 @@
+#!/usr/bin/env node
+// Generate .claude-plugin/{plugin.json,marketplace.json} from package.json.
+// `--check` verifies they are byte-identical to what would be generated (the
+// pretest gate) so the committed manifests never drift from package.json.
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = fileURLToPath(new URL("..", import.meta.url));
+const pkg = JSON.parse(readFileSync(path.join(root, "package.json"), "utf-8"));
+const pluginDir = path.join(root, ".claude-plugin");
+
+const author = pkg.author?.name ? { name: pkg.author.name } : { name: "PromptBuster" };
+
+const plugin = {
+  name: "prompt-buster",
+  version: pkg.version,
+  description: pkg.description,
+  author,
+  homepage: pkg.homepage,
+  repository: typeof pkg.repository === "string" ? pkg.repository : pkg.repository?.url,
+  license: pkg.license,
+  keywords: pkg.keywords,
+};
+
+const marketplace = {
+  name: "prompt-buster",
+  owner: author,
+  plugins: [
+    {
+      name: "prompt-buster",
+      source: "./",
+      description: pkg.description,
+      version: pkg.version,
+    },
+  ],
+};
+
+const targets = [
+  { file: path.join(pluginDir, "plugin.json"), data: plugin },
+  { file: path.join(pluginDir, "marketplace.json"), data: marketplace },
+];
+
+const check = process.argv.includes("--check");
+let drift = false;
+
+for (const { file, data } of targets) {
+  const content = JSON.stringify(data, null, 2) + "\n";
+  if (check) {
+    const current = existsSync(file) ? readFileSync(file, "utf-8") : "";
+    if (current !== content) {
+      drift = true;
+      process.stderr.write(`manifest drift: ${path.relative(root, file)} is out of date — run: npm run generate-manifests\n`);
+    }
+  } else {
+    mkdirSync(pluginDir, { recursive: true });
+    writeFileSync(file, content);
+    process.stdout.write(`wrote ${path.relative(root, file)}\n`);
+  }
+}
+
+if (check && drift) process.exit(1);

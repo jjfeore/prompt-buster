@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "prompt-buster": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/bin/prompt-buster.mjs", "mcp"]
+    }
+  }
+}
