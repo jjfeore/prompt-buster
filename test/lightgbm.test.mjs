@@ -3,13 +3,13 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { directFeatureCounts, crc32, totalFeatureCount } from "../lib/engine/filters/lightgbm-features.js";
-import { loadModel, check, _resetCache } from "../lib/engine/filters/lightgbm.js";
+import { directFeatureCounts, crc32, totalFeatureCount } from "../skills/prompt-buster/scripts/lib/engine/filters/lightgbm-features.js";
+import { loadModel, check, _resetCache } from "../skills/prompt-buster/scripts/lib/engine/filters/lightgbm.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.join(here, "..");
+const skillAssets = path.join(here, "..", "skills", "prompt-buster", "assets");
 const golden = JSON.parse(readFileSync(path.join(here, "_fixtures", "golden-vectors.json"), "utf-8"));
-const metadata = JSON.parse(readFileSync(path.join(repoRoot, "models", "lightgbm", "metadata.json"), "utf-8"));
+const metadata = JSON.parse(readFileSync(path.join(skillAssets, "models", "lightgbm", "metadata.json"), "utf-8"));
 const config = metadata.direct_feature_config;
 
 test("crc32 matches known zlib checksums", () => {
@@ -74,7 +74,7 @@ test("check() triggers on attacks and passes benign text", async () => {
 });
 
 test("chunked production path matches Python chunk-and-max to <=1e-6", async () => {
-  const { overlappingTextChunks } = await import("../lib/chunks.js");
+  const { overlappingTextChunks } = await import("../skills/prompt-buster/scripts/lib/chunks.js");
   _resetCache();
   const runner = loadModel();
   const maxChars = runner.config.max_chars;

@@ -1,32 +1,13 @@
 {
   "name": "prompt-buster",
   "version": "0.1.0",
+  "private": true,
   "description": "Local prompt-injection firewall for AI agents that browse the web: layered pre-filters (regex, LightGBM, Wolf Defender), optional LLM review, and human/agent escalation — for Claude Code, Codex, OpenClaw, Hermes, and OpenCode",
   "type": "module",
-  "bin": { "prompt-buster": "./bin/prompt-buster.mjs" },
-  "files": [
-    "bin/",
-    "lib/",
-    "hooks/",
-    ".mcp.json",
-    "scripts/pb-hook.mjs",
-    "scripts/generate-manifests.mjs",
-    "integrations/",
-    "skills/",
-    ".claude-plugin/",
-    "models/",
-    "docs/",
-    "AGENTS.md"
-  ],
   "engines": { "node": ">=18" },
-  "exports": {
-    ".": "./lib/engine/pipeline.js",
-    "./opencode": "./integrations/opencode/index.js",
-    "./package.json": "./package.json"
-  },
   "scripts": {
     "generate-manifests": "node scripts/generate-manifests.mjs",
-    "version": "node scripts/generate-manifests.mjs && git add .claude-plugin",
+    "version": "node scripts/generate-manifests.mjs && git add .claude-plugin skills/prompt-buster/scripts/lib/version-info.js",
     "test": "node --test",
     "pretest": "node scripts/generate-manifests.mjs --check"
   },

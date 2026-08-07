@@ -1,135 +1,126 @@
 # MIGRATION.md — publishing & distributing PromptBuster
 
-This repo (`C:\Users\jjfeo\Repos\prompt-buster`, remote
-`github.com/jjfeore/prompt-buster`) is already structured to be **one artifact
-served through five channels**: it is simultaneously an npm package, a Claude
-Code plugin, a Hermes tap, and an agentskills.io skill source. Everything below
-is copy-pasteable. Steps tagged **James-only** need you.
+Distribution is via the **skills CLI** (`npx skills add`), not npm. That means
+there is no package to publish, no npm account, no 2FA, no trusted-publishing
+config, and no name to squat — **making the repo public IS the release.**
 
-Nothing in this file requires committing a secret.
+The repo doubles as a Claude Code plugin, which is the one-command path for
+Claude users who want enforced hooks. Steps tagged **James-only** need you.
 
 ## 0. What only James can do
 
-- [ ] **npm account + 2FA**, and pick the final package name → §2
-- [ ] **Confirm the LightGBM model license** — the vendored booster
-      (`models/lightgbm/model.txt`) was trained inside Abeeo. Decide it's OK to
-      publish under MIT in a public repo, OR swap it for a download step (§6).
-- [ ] **ClawHub login + the MIT-0 relicense decision** → §5
-- [ ] **Claude marketplace submission** (community form) → §3
-- [ ] **Optionally link the repo from abeeo.ai / your site** → §8
+- [ ] **Make the GitHub repo public** (that's the release) → §1
+- [ ] **Confirm the LightGBM model license** — the vendored booster at
+      `skills/prompt-buster/assets/models/lightgbm/model.txt` was trained inside
+      Abeeo. Decide it's OK to publish under MIT, or swap it for a download
+      step (§5).
+- [ ] **Optional:** Claude marketplace community submission → §3
+- [ ] **Optional:** ClawHub publish + its MIT-0 relicense decision → §4
 
-## 1. The repo is already public-ready
+## 1. Release = make the repo public
 
-The remote is already `github.com/jjfeore/prompt-buster`. Before the first
-release:
+`github.com/jjfeore/prompt-buster` is already the remote. Once it's public:
 
-1. **Regenerate the plugin manifests** (they're generated from `package.json`,
-   never hand-edited):
-   ```bash
-   npm run generate-manifests
-   git add .claude-plugin && git commit -m "chore: manifests"
-   ```
-   `npm test` runs a `pretest` drift check that fails if they're stale.
-2. **Review the `description` in `package.json`** — it flows verbatim into the
-   npm listing, the Claude marketplace card, and ClawHub. Regenerate manifests
-   if you change it.
-3. **`.planning/` is internal.** It's excluded from the npm tarball by the
-   `files` allowlist (verify with `npm pack --dry-run`). Keep it in git for
-   history, or move it out before publishing the repo — your call; it does not
-   ship to npm either way.
-
-## 2. npm
-
-Both `prompt-buster` and `promptbuster` were unclaimed on 2026-07-12.
-**Re-check at publish time**: `npm view prompt-buster` returning E404 means it's
-still free.
-
-| Option | Trade-off |
-|---|---|
-| `prompt-buster` (current name) | Matches the repo and bin; zero renames. |
-| `@jjfeore/prompt-buster` (scoped) | Namespace safety; scoped packages default private, so the **first publish needs `npm publish --access public`**. |
-
-> **James-only:** create/confirm the npm account, enable 2FA, pick the name
-> (renaming after first publish means a new package).
-
-**Publish with trusted publishing (OIDC) — no npm token anywhere.** GA since
-July 2025; needs npm CLI ≥ 11.5.1; auto-generates provenance. Configure the
-trusted publisher on npmjs.com (package settings → trusted publishing) pointing
-at this repo and the exact workflow file below. Configs created after
-2026-05-20 must explicitly select the allowed workflow.
-
-Version/release flow:
 ```bash
-npm version <patch|minor|major>   # bumps package.json, runs the `version` script
-                                   # (regenerates manifests + git-adds them), tags
-git push --follow-tags             # the v* tag triggers the publish workflow (§7)
+npx skills@latest add jjfeore/prompt-buster -g
 ```
 
-## 3. Claude Code marketplace
+...installs PromptBuster into every supported agent. Nothing else required.
 
-The repo root is a valid plugin (`.claude-plugin/plugin.json` + `hooks/` +
-`.mcp.json` + `skills/`), and `marketplace.json` lists it, so direct installs
-work the moment the repo is public:
+Before flipping it public:
+
+1. **Regenerate the generated files** (never hand-edit them):
+   ```bash
+   npm run generate-manifests   # writes .claude-plugin/* and scripts/lib/version-info.js
+   npm test                     # `pretest` fails if either has drifted
+   ```
+2. **Review `description` in `package.json`** — it flows into
+   `.claude-plugin/plugin.json` and the marketplace card.
+3. **`.planning/` is internal.** It stays in git for history but is *not* part
+   of the skill (the skills CLI copies only `skills/prompt-buster/`). Delete it
+   before going public if you'd rather it not be visible.
+
+### Repo name note
+
+`npx skills add jjfeore/prompt-buster` follows the repo name. If you'd rather
+type `jjfeore/promptbuster`, rename the GitHub repo — the skill's own name
+(`prompt-buster`, which must match its directory) is unaffected either way.
+
+## 2. What ships, and what doesn't
+
+The skills CLI copies **`skills/prompt-buster/` only**:
+
+```
+skills/prompt-buster/
+├── SKILL.md              # entry point; agentskills.io frontmatter
+├── references/           # CONFIG.md, HARNESSES.md
+├── scripts/              # the whole engine: pb.mjs, pb-hook.mjs, lib/, integrations/
+└── assets/               # models/lightgbm (1.6 MB), models/wolf/manifest.json, corpus/
+```
+
+~2 MB total — comfortably inside the skills CLI limits (10 MiB download /
+25 MiB extracted / 1000 files).
+
+Left behind at the repo root, by design: `test/`, `scripts/` (dev tooling),
+`package.json`, `docs/`, and the Claude-plugin wrapper (`.claude-plugin/`,
+`hooks/`, `.mcp.json`) — which only matters for the plugin channel (§3).
+
+**Versioning:** the skill can't read `package.json`, so the version is mirrored
+into `skills/prompt-buster/scripts/lib/version-info.js` by
+`npm run generate-manifests`, and `npm test` fails on drift. Bump with
+`npm version <patch|minor|major>` — the `version` lifecycle script regenerates
+and stages both. Users update with `npx skills update prompt-buster`.
+
+## 3. Claude Code plugin (optional, recommended)
+
+The repo root is also a valid plugin, so Claude users get enforced hooks + MCP
+in one step without running `pb install`:
+
 ```
 /plugin marketplace add jjfeore/prompt-buster
 /plugin install prompt-buster@prompt-buster
 ```
-This is the **enforced** Claude path: the `PostToolUse` hook on
-`WebFetch|WebSearch` rewrites flagged tool output, and the bundled MCP server
-exposes `pb_fetch`/`pb_scan`.
 
-Community distribution: submit at platform.claude.com/plugins/submit. Run
-`claude plugin validate --strict` first (the test suite runs it automatically
+`hooks/hooks.json` and `.mcp.json` point into
+`${CLAUDE_PLUGIN_ROOT}/skills/prompt-buster/scripts/`, so the plugin and the
+skill share one engine.
+
+Community distribution: submit at platform.claude.com/plugins/submit after
+`claude plugin validate --strict` passes (the test suite runs it automatically
 when the `claude` CLI is on PATH; loud-skips otherwise).
 
-> **James-only:** the marketplace submission form.
+> **James-only:** the submission form.
 
-## 4. OpenCode / Codex (no publish step)
-
-Both are covered by npm + the installer:
-- `npx prompt-buster install --opencode` drops the plugin file; users can also
-  add `"plugin": ["prompt-buster@<version>"]` to `opencode.json` (pin the
-  version for supply-chain safety).
-- `npx prompt-buster install --codex` writes the skill and prints the
-  `~/.codex/config.toml` snippet (disable native `web_search`, register the PB
-  MCP server). Codex requires the user to trust any hook via `/hooks`.
-
-## 5. ClawHub (OpenClaw registry)
+## 4. ClawHub (optional)
 
 ```bash
-npm i -g clawhub
-clawhub login    # GitHub auth; the account must be old enough to pass the gate
+npm i -g clawhub && clawhub login
 clawhub skill publish ./skills/prompt-buster --slug prompt-buster \
   --name "PromptBuster" --version 0.1.0 --changelog "Initial release" --tags latest
 ```
-Constraints: bundle ≤ 50 MB, text files only, slug lowercase/npm-safe.
 
-> **James-only — business decision:** ClawHub forcibly relicenses every
-> published skill **MIT-0**. The package stays MIT; the skill bundle would be
-> MIT-0. Skipping ClawHub is fine — OpenClaw reads `~/.openclaw/skills/`
-> natively and `install --openclaw` covers it.
+Constraints: ≤ 50 MB, **text files only** — the 1.6 MB `model.txt` is text, so
+this passes, but verify at publish time.
 
-## 6. Hermes (tap — no publish step)
+> **James-only — business decision:** ClawHub forcibly relicenses published
+> skills **MIT-0**. Skipping it is fine: OpenClaw reads `~/.openclaw/skills/`
+> natively and `pb install --openclaw` covers it.
 
-The repo is already tap-shaped (`skills/<name>/SKILL.md` at root):
-```
-hermes skills tap add jjfeore/prompt-buster
-```
-For enforced interception, `npx prompt-buster install --hermes` also writes the
-Python shim plugin to `~/.hermes/plugins/prompt-buster/`; the user enables it in
-`~/.hermes/config.yaml` (`plugins: {enabled: [prompt-buster]}`).
+## 5. If the vendored LightGBM model can't ship publicly
 
-### If the vendored LightGBM model can't ship publicly
+If you decide not to publish `assets/models/lightgbm/model.txt` under MIT:
 
-If you decide (see §0) not to publish `models/lightgbm/model.txt` under MIT:
-1. Remove it from `files` in `package.json` and from git.
-2. Host it somewhere you control (a GitHub release asset, your own bucket).
-3. Change `prompt-buster setup lightgbm` from a vendored-check to a download +
-   sha256-verify step (mirror `lib/engine/filters/wolf.js` `downloadModel`).
-4. The `lightgbm` filter then reports "not set up" until `setup lightgbm` runs.
+1. Remove it from the repo.
+2. Host it as a GitHub release asset (or anywhere you control).
+3. Change `pb setup lightgbm` from a vendored-check to a download +
+   sha256-verify step — mirror `downloadModel` in
+   `skills/prompt-buster/scripts/lib/engine/filters/wolf.js`, which already does
+   exactly this (pinned revision, per-file sha256, verify-before-rename).
+4. The `lightgbm` filter then reports "not set up" until `pb setup lightgbm` runs.
+
 The regex filter and Wolf are unaffected.
 
-## 7. CI
+## 6. CI
 
 ```yaml
 # .github/workflows/test.yml
@@ -148,40 +139,20 @@ jobs:
         with: { node-version: "${{ matrix.node }}" }
       - run: npm test
 ```
+
 Windows in the matrix is non-negotiable (spawn/path handling is win32-sensitive).
-The golden-vector fixture is committed, so CI needs no Python.
+The golden-vector fixture is committed, so CI needs no Python. **No publish
+workflow is needed** — there's nothing to publish.
 
-```yaml
-# .github/workflows/publish.yml — trusted publishing, NO npm token secret
-name: publish
-on:
-  push:
-    tags: ["v*"]
-permissions:
-  id-token: write
-  contents: read
-jobs:
-  publish:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 24, registry-url: "https://registry.npmjs.org" }
-      - run: npm install -g npm@latest   # trusted publishing needs npm >= 11.5.1
-      - run: npm test
-      - run: npm publish                 # OIDC; provenance automatic
-```
+## 7. Re-verify at release time
 
-## 8. Re-verify at authoring time
-
-- `npm view prompt-buster` (name still free?).
-- `npm pack --dry-run` → tarball contains `bin/ lib/ hooks/ scripts/pb-hook.mjs
-  scripts/generate-manifests.mjs integrations/ skills/ .claude-plugin/ models/
-  docs/` + README/LICENSE/package.json, and **no** `.planning/`, `.venv/`,
-  `test/`, or credentials.
+- `npx skills add jjfeore/prompt-buster --list` resolves and shows the skill.
+- A clean-machine smoke test: install the skill, then
+  `node <skill>/scripts/pb.mjs doctor` → regex + lightgbm report ready.
+- `pb install --claude` on a machine where the skill is already in
+  `~/.claude/skills/` must report *installed* without destroying itself (there's
+  a regression test for this, but verify once for real).
 - Harness contracts drift — `docs/HARNESSES.md` records the versions each
-  adapter was verified against (2026-07-12). Re-check on major harness upgrades;
-  the adapters are thin, so only they change.
-- The `gpt-5.5-nano` / model-id defaults in `review.js` are sensible today;
-  confirm against the current model list and adjust `review.model` defaults if
-  needed.
+  adapter was verified against (2026-07-12). Re-check on major upgrades.
+- The `gpt-5.5-nano` / model-id defaults in `review.js` — confirm against the
+  current model list.

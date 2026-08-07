@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
-import { check, loadManifest } from "../lib/engine/filters/wolf.js";
+import { check, loadManifest } from "../skills/prompt-buster/scripts/lib/engine/filters/wolf.js";
 
 /** Start a stub Abeeo prompt_guard /classify server; returns {url, close}. */
 function stubGuard(handler) {

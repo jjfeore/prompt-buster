@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync, existsSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
+import { mkdtempSync, rmSync, existsSync, mkdirSync, writeFileSync, readFileSync, symlinkSync } from "node:fs";
 import { tmpdir, homedir } from "node:os";
 import path from "node:path";
 
@@ -16,7 +16,7 @@ process.env.HOME = fakeHome;
 process.env.USERPROFILE = fakeHome;
 process.env.XDG_CONFIG_HOME = path.join(fakeHome, ".config");
 
-const { run } = await import("../lib/commands/install.js");
+const { run } = await import("../skills/prompt-buster/scripts/lib/commands/install.js");
 
 test("install --hermes writes skill + shim with baked CLI path", async () => {
   const code = await run(["--hermes", "--global", "--output", "json"], { command: "install" });
@@ -68,6 +68,31 @@ test("--force overwrites foreign content", async () => {
   const code = await run(["--openclaw", "--global", "--force"], { command: "install" });
   assert.equal(code, 0);
   assert.ok(readFileSync(path.join(dir, "SKILL.md"), "utf-8").includes("name: prompt-buster"));
+});
+
+test("SECURITY: installing into the skill's own location does not delete it", async () => {
+  // After `npx skills add`, the skill already lives in the agent's skills dir.
+  // Re-running install must detect self and skip, never rmSync its own source.
+  const { fileURLToPath } = await import("node:url");
+  const skillRoot = path.resolve(fileURLToPath(new URL("../skills/prompt-buster/", import.meta.url)));
+
+  // Point Claude's global skills dir at the real skill root by faking HOME so
+  // that ~/.claude/skills/prompt-buster resolves onto the source itself.
+  const claudeSkills = path.join(fakeHome, ".claude", "skills");
+  mkdirSync(claudeSkills, { recursive: true });
+  const link = path.join(claudeSkills, "prompt-buster");
+  rmSync(link, { recursive: true, force: true });
+  try {
+    symlinkSync(skillRoot, link, "junction");
+  } catch {
+    return; // symlink/junction unavailable (needs privileges) — skip
+  }
+
+  const code = await run(["--claude", "--global"], { command: "install" });
+  assert.ok(existsSync(path.join(skillRoot, "SKILL.md")), "the skill's own SKILL.md still exists");
+  assert.ok(existsSync(path.join(skillRoot, "scripts", "pb.mjs")), "the engine still exists");
+  assert.ok(code === 0 || code === 6, "install completes without destroying itself");
+  rmSync(link, { recursive: true, force: true });
 });
 
 test.after(() => {

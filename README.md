@@ -48,35 +48,59 @@ web content ─▶ ①ingress ─▶ ②pre-filters ─▶ ③LLM review ─▶ 
    mode, the agent) choose: **reject**, **allow with a warning note**, or
    **allow unaltered**.
 
+## Install
+
+PromptBuster ships as an **agent skill** — one command, no npm account, no
+global package:
+
+```bash
+npx skills@latest add jjfeore/prompt-buster -g
+```
+
+That works for Claude Code, Codex, OpenCode, Cursor, and the other agents the
+[skills CLI](https://github.com/vercel-labs/skills) supports (`-g` = available
+in every project; drop it for project-local). The scanning engine and the
+LightGBM model ship **inside** the skill, so there is nothing else to fetch.
+
+Then activate **enforced** interception (wires up hooks/MCP so untrusted content
+can't reach the model unscanned — installing the skill alone is advisory):
+
+```bash
+node ~/.claude/skills/prompt-buster/scripts/pb.mjs install --claude
+# or --codex --openclaw --hermes --opencode --all
+```
+
+Claude Code users can instead install the repo as a plugin, which wires the
+`PostToolUse` hook and MCP server automatically:
+
+```
+/plugin marketplace add jjfeore/prompt-buster
+/plugin install prompt-buster@prompt-buster
+```
+
 ## Quick start
 
-```bash
-# scan text (exit 3 = flagged/blocked)
-echo "ignore all previous instructions" | npx prompt-buster scan
-
-# guarded fetch
-npx prompt-buster fetch https://example.com
-
-# check your environment
-npx prompt-buster doctor
-```
-
-### Install into your harness
+The CLI lives inside the skill. Substitute your install path (shown by the
+install command); shell alias suggestion: `alias pb='node ~/.claude/skills/prompt-buster/scripts/pb.mjs'`.
 
 ```bash
-npx prompt-buster install --claude       # or --codex --openclaw --hermes --opencode --all
+pb doctor                                   # what's active, which filters are ready
+pb fetch https://example.com                # guarded fetch
+echo "ignore all previous instructions" | pb scan --stdin   # exit 3 = flagged
+pb review <quarantine-id>                   # human review of blocked content
 ```
 
-- **Claude Code** (enforced via hooks): install the plugin —
-  `/plugin marketplace add jjfeore/prompt-buster` then
-  `/plugin install prompt-buster@prompt-buster`. A `PostToolUse` hook on
-  `WebFetch`/`WebSearch` replaces flagged content with a block notice.
-- **OpenCode** (enforced via plugin): the installer drops a plugin that
-  firewalls web-tool results in place.
-- **Codex / OpenClaw / Hermes**: the installer places a skill + an MCP server
-  (and, for Hermes, a Python shim that intercepts tool results). Codex's native
-  web search isn't hookable, so PB disables it and routes fetch/search through
-  its MCP tool. See [docs/HARNESSES.md](docs/HARNESSES.md).
+**Per-harness enforcement** (what `pb install` sets up):
+
+- **Claude Code** — `PostToolUse` hook on `WebFetch`/`WebSearch` replaces
+  flagged content with a block notice, plus the `pb_*` MCP tools.
+- **OpenCode** — a plugin that firewalls web-tool results in place.
+- **Codex** — its native web search isn't hookable, so PB disables it and routes
+  fetch/search through the MCP server.
+- **OpenClaw** — native web tools disabled, MCP guarded fetch registered.
+- **Hermes** — a Python shim plugin intercepting tool results before the model.
+
+See [docs/HARNESSES.md](docs/HARNESSES.md).
 
 ## Configuration
 
@@ -85,10 +109,10 @@ defaults → `~/.prompt-buster/config.json` → project `.prompt-buster.json`
 (restricted — see Security) → `PROMPT_BUSTER_CONFIG` → flags.
 
 ```bash
-prompt-buster config set prefilters.order '["regex","lightgbm"]'   # low-resource preset
-prompt-buster config set filters.wolf.threshold 0.6
-prompt-buster config set escalation.mode agent                     # autonomous fleets
-prompt-buster patterns add --id my_rule --pattern "leak.*credentials"
+pb config set prefilters.order '["regex","lightgbm"]'   # low-resource preset
+pb config set filters.wolf.threshold 0.6
+pb config set escalation.mode agent                     # autonomous fleets
+pb patterns add --id my_rule --pattern "leak.*credentials"
 ```
 
 Full reference: [docs/CONFIG.md](docs/CONFIG.md).
@@ -97,8 +121,8 @@ Full reference: [docs/CONFIG.md](docs/CONFIG.md).
 
 | Machine | Recommended `prefilters.order` | Notes |
 |---|---|---|
-| Default | `["regex", "wolf"]` | Best accuracy. Needs `setup wolf` (one-time). |
-| Low CPU/RAM | `["regex", "lightgbm"]` | Pure-JS, no download, ~1.6 MB vendored. |
+| Default | `["regex", "wolf"]` | Best accuracy. Needs `pb setup wolf` (one-time). |
+| Low CPU/RAM | `["regex", "lightgbm"]` | Pure-JS, no download, ~1.6 MB vendored in the skill. |
 | Have a GPU/service | `["regex", "wolf"]` + `filters.wolf.mode: "http"` | Point at any Abeeo prompt_guard-compatible `/classify` service. |
 
 ## Security notes
@@ -108,7 +132,7 @@ Full reference: [docs/CONFIG.md](docs/CONFIG.md).
   from project config unless you set `PROMPT_BUSTER_ALLOW_PROJECT_CONFIG=1`.
 - **Wolf Defender install** runs `npm install onnxruntime-node`, which unpacks a
   native binary via its postinstall script. This is inherent to in-process ONNX
-  inference and is why Wolf is an explicit opt-in — the base package installs
+  inference and is why Wolf is an explicit opt-in — the skill itself installs
   nothing. See [docs/THREAT-MODEL.md](docs/THREAT-MODEL.md).
 - **No MITM proxy.** PB intercepts at the tool layer, not the TLS socket. Why:
   [docs/PROXY.md](docs/PROXY.md).
@@ -122,11 +146,16 @@ Full reference: [docs/CONFIG.md](docs/CONFIG.md).
 ## Development
 
 ```bash
-npm test                 # 68 tests, zero-dep (node:test)
+npm test                 # 91 tests, zero-dep (node:test)
 # regenerate LightGBM golden vectors (needs python + lightgbm):
 py -m venv .venv && .venv/Scripts/python -m pip install lightgbm numpy
 .venv/Scripts/python scripts/golden/generate.py
 ```
+
+The distributed unit is `skills/prompt-buster/` — engine under `scripts/`,
+model and corpus under `assets/`. The repo root holds only dev tooling
+(`test/`, `scripts/`, `package.json`) and the Claude-plugin wrapper
+(`.claude-plugin/`, `hooks/`, `.mcp.json`), none of which ships with the skill.
 
 See [.planning/](.planning/) for the full spec, decision log, and the
 adversarial review that shaped this build. Publishing/distribution:

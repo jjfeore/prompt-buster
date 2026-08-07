@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { stripControl, redactSecrets, wrapUntrusted, sha256Hex } from "../lib/sanitize.js";
+import { stripControl, redactSecrets, wrapUntrusted, sha256Hex } from "../skills/prompt-buster/scripts/lib/sanitize.js";
 
 test("stripControl removes ANSI escapes and escapes control chars", () => {
   const hostile = "hello \x1b[31mRED\x1b[0m bell \x07 null \x00";

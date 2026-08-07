@@ -6,31 +6,49 @@ are thin adapters over it.
 
 ## Layout
 
+The **distributed unit is `skills/prompt-buster/`** — that whole directory is
+what `npx skills add` copies into an agent's skills dir, so the engine and its
+model live inside it. Everything at the repo root is dev tooling or the
+Claude-plugin wrapper and does *not* ship.
+
 ```
-bin/prompt-buster.mjs          # CLI entry (Node version gate, dispatch)
-lib/
-  args.js  output.js  config.js  paths.js  http.js  sanitize.js  chunks.js
-  engine/
-    pipeline.js                # stages 2-4 orchestration; produces ScanResult
-    quarantine.js              # quarantine store + allow/deny decision cache + audit
-    review.js                  # stage-3 LLM review (5 providers, strict verdict)
-    extract.js                 # HTML -> scannable text (keeps hidden channels)
-    daemon.js / dispatch.js    # warm scan daemon + daemon-or-local routing
-    filters/
-      regex.js  regex-patterns.js        # deterministic catalogue + evasion
-      lightgbm.js  lightgbm-model.js  lightgbm-features.js   # pure-JS classifier
-      wolf.js                            # ModernBERT (local via transformers.js, or http)
-      custom.js                          # user HTTP/command classifiers
-  mcp/server.js                # zero-dep stdio JSON-RPC MCP server
-  commands/                    # one module per CLI command
-hooks/hooks.json  .mcp.json    # Claude Code plugin wiring
-scripts/pb-hook.mjs            # Claude PostToolUse adapter
-integrations/opencode/         # OpenCode JS plugin
-integrations/hermes/           # Hermes Python shim plugin
-skills/prompt-buster/          # agentskills.io skill + references
-models/lightgbm/               # vendored booster (1.6MB) + metadata
-models/wolf/manifest.json      # sha256-pinned HF artifact list (downloaded on setup)
+skills/prompt-buster/          # ← the shipped skill
+  SKILL.md                     # agentskills.io entry point
+  references/                  # CONFIG.md, HARNESSES.md
+  scripts/
+    pb.mjs                     # CLI entry (Node version gate, dispatch)
+    pb-hook.mjs                # Claude PostToolUse adapter
+    lib/
+      args.js output.js config.js paths.js http.js sanitize.js chunks.js
+      version-info.js          # GENERATED — version (skill can't read package.json)
+      engine/
+        pipeline.js            # stages 2-4 orchestration; produces ScanResult
+        quarantine.js          # quarantine store + allow/deny cache + audit
+        review.js              # stage-3 LLM review (5 providers, strict verdict)
+        extract.js             # HTML -> scannable text (keeps hidden channels)
+        daemon.js dispatch.js  # warm scan daemon + daemon-or-local routing
+        filters/
+          regex.js regex-patterns.js                     # catalogue + evasion
+          lightgbm.js lightgbm-model.js lightgbm-features.js  # pure-JS classifier
+          wolf.js                                        # ModernBERT (local/http)
+          custom.js                                      # user classifiers
+      mcp/server.js            # zero-dep stdio JSON-RPC MCP server
+      commands/                # one module per CLI command
+    integrations/opencode/     # OpenCode JS plugin
+    integrations/hermes/       # Hermes Python shim plugin
+  assets/
+    models/lightgbm/           # vendored booster (1.6MB) + metadata
+    models/wolf/manifest.json  # sha256-pinned HF artifact list (downloaded on setup)
+    corpus/                    # attack/benign self-test corpus
+
+.claude-plugin/ hooks/ .mcp.json   # Claude plugin wrapper -> points into the skill
+test/ scripts/ package.json        # dev only; never shipped
 ```
+
+**Path resolution:** `lib/paths.js` exposes `skillRoot()` (two levels up from
+`scripts/lib/`), `assetsDir()`, and `cliEntryPath()`. Nothing resolves paths
+relative to a repo root, which is what lets the skill work standalone wherever
+the skills CLI drops it.
 
 ## The pipeline (`scan`)
 
@@ -68,6 +86,9 @@ server and `serve` run the pipeline in-process directly.
   `name` + `async check(text, {config})`, register it in `DEFAULT_FILTER_LOADERS`
   (pipeline.js), and add validation in `config.js`. Golden-test any classifier.
 - **A new review provider**: add a case to `buildProvider` in `review.js`.
-- **A new harness**: add an adapter (a hook script or plugin) that calls the CLI
-  `scan`/`fetch` or the MCP server, and an installer branch. The engine doesn't
-  change.
+- **A new harness**: add an adapter (a hook script or plugin) under
+  `scripts/integrations/` that calls the CLI `scan`/`fetch` or the MCP server,
+  plus an installer branch in `commands/install.js` (skill dirs + config
+  snippet). The engine doesn't change.
+- **Anything referencing a file on disk** must go through `paths.js` helpers, so
+  it keeps working from an arbitrary skills-CLI install location.

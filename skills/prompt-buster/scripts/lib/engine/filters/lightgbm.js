@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { packageRoot } from "../../paths.js";
+import { assetsDir } from "../../paths.js";
 import { overlappingTextChunks } from "../../chunks.js";
 import { directFeatureDense, totalFeatureCount } from "./lightgbm-features.js";
 import { parseLightGBMModel } from "./lightgbm-model.js";
@@ -17,7 +17,7 @@ let cached = null;
 
 export function loadModel({ modelDir } = {}) {
   if (cached && !modelDir) return cached;
-  const dir = modelDir || path.join(packageRoot(), "models", "lightgbm");
+  const dir = modelDir || path.join(assetsDir(), "models", "lightgbm");
   const metadata = JSON.parse(readFileSync(path.join(dir, "metadata.json"), "utf-8"));
   const config = metadata.direct_feature_config;
   const model = parseLightGBMModel(readFileSync(path.join(dir, "model.txt"), "utf-8"));

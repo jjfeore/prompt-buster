@@ -3,7 +3,11 @@ import { emit, outputMode } from "../output.js";
 const HELP = `prompt-buster — local prompt-injection firewall for AI agents
 
 USAGE
-  prompt-buster <command> [options]
+  node <skill-dir>/scripts/pb.mjs <command> [options]
+  (tip: alias pb='node <skill-dir>/scripts/pb.mjs')
+
+  Install the skill:  npx skills@latest add jjfeore/prompt-buster -g
+  Then activate enforcement:  pb install --claude   (or --codex --all, ...)
 
 SCANNING
   scan [--stdin | --file <p> | --text <s>] [--url-context <u>] [--harness <h>]
@@ -37,7 +41,8 @@ GLOBAL
   --output json|text   Output format (defaults to json when not a TTY).
   --version, --help
 
-Docs: https://github.com/jjfeore/prompt-buster`;
+Docs: https://github.com/jjfeore/prompt-buster
+Config: ~/.prompt-buster/config.json  (pb config list)`;
 
 export async function run() {
   const mode = outputMode({});

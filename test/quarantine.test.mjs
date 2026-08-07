@@ -7,7 +7,7 @@ import path from "node:path";
 const home = mkdtempSync(path.join(tmpdir(), "pb-quar-"));
 process.env.PROMPT_BUSTER_HOME = home;
 
-const { defaultConfig } = await import("../lib/config.js");
+const { defaultConfig } = await import("../skills/prompt-buster/scripts/lib/config.js");
 const {
   storeQuarantine,
   releaseQuarantine,
@@ -15,8 +15,8 @@ const {
   checkDecision,
   getQuarantine,
   clearQuarantine,
-} = await import("../lib/engine/quarantine.js");
-const { decisionsPath } = await import("../lib/paths.js");
+} = await import("../skills/prompt-buster/scripts/lib/engine/quarantine.js");
+const { decisionsPath } = await import("../skills/prompt-buster/scripts/lib/paths.js");
 
 const config = defaultConfig();
 

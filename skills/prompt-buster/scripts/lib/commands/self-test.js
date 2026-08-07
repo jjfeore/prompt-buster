@@ -3,7 +3,7 @@ import path from "node:path";
 import { parseCommandArgs } from "../args.js";
 import { emit, outputMode, EXIT } from "../output.js";
 import { loadConfig } from "../config.js";
-import { packageRoot } from "../paths.js";
+import { assetsDir } from "../paths.js";
 import { check as regexCheck } from "../engine/filters/regex.js";
 import { check as lightgbmCheck } from "../engine/filters/lightgbm.js";
 
@@ -16,7 +16,7 @@ export async function run(argv) {
   const { flags } = parseCommandArgs(argv, { attack: { type: "boolean" }, benign: { type: "boolean" } });
   const mode = outputMode(flags);
   const config = loadConfig();
-  const corpusDir = path.join(packageRoot(), "test", "_fixtures", "corpus");
+  const corpusDir = path.join(assetsDir(), "corpus");
 
   const runOne = async (text) => {
     const regex = await regexCheck(text, { config });

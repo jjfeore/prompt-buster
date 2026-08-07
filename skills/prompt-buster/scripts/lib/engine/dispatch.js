@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 import { scan } from "./pipeline.js";
 import { pingDaemon, scanViaDaemon, readDaemonInfo } from "./daemon.js";
-import { packageRoot } from "../paths.js";
+import { cliEntryPath } from "../paths.js";
 
 /**
  * Choose between the warm daemon and in-process scanning. The daemon only
@@ -47,7 +47,7 @@ async function ensureDaemon(config) {
 
 async function spawnDaemon(config) {
   const startTimeout = config?.daemon?.startTimeoutMs ?? 2000;
-  const bin = path.join(packageRoot(), "bin", "prompt-buster.mjs");
+  const bin = cliEntryPath();
   try {
     const child = spawn(process.execPath, [bin, "serve"], {
       detached: true,

@@ -2,7 +2,7 @@
   "mcpServers": {
     "prompt-buster": {
       "command": "node",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/bin/prompt-buster.mjs", "mcp"]
+      "args": ["${CLAUDE_PLUGIN_ROOT}/skills/prompt-buster/scripts/pb.mjs", "mcp"]
     }
   }
 }

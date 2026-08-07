@@ -4,7 +4,7 @@ import { Readable, Transform } from "node:stream";
 import { pipeline as streamPipeline } from "node:stream/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
-import { packageRoot, wolfModelDir, runtimeDir, ensureDir } from "../../paths.js";
+import { assetsDir, wolfModelDir, runtimeDir, ensureDir } from "../../paths.js";
 import { overlappingTextChunks } from "../../chunks.js";
 
 /**
@@ -135,7 +135,7 @@ async function loadLocalRunner(wolf) {
 // --- Model download (sha256-pinned) -------------------------------------
 
 export function loadManifest() {
-  const manifestPath = path.join(packageRoot(), "models", "wolf", "manifest.json");
+  const manifestPath = path.join(assetsDir(), "models", "wolf", "manifest.json");
   const manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
   if (manifest.schema_version !== 1) throw new Error("unsupported wolf manifest schema");
   if (!/^[0-9a-f]{40}$/.test(String(manifest.revision))) throw new Error("wolf manifest revision must be a 40-char commit sha");

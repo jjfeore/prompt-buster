@@ -7,7 +7,7 @@ import path from "node:path";
 const home = mkdtempSync(path.join(tmpdir(), "pb-config-"));
 process.env.PROMPT_BUSTER_HOME = home;
 
-const { loadConfig, defaultConfig, deepMerge, validateConfig, ConfigError, sanitizeUntrustedLayer } = await import("../lib/config.js");
+const { loadConfig, defaultConfig, deepMerge, validateConfig, ConfigError, sanitizeUntrustedLayer } = await import("../skills/prompt-buster/scripts/lib/config.js");
 
 test("defaults validate cleanly", () => {
   const warnings = validateConfig(defaultConfig());

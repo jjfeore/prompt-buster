@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { isBlockedHost, boundedFetch, FetchError } from "../lib/http.js";
+import { isBlockedHost, boundedFetch, FetchError } from "../skills/prompt-buster/scripts/lib/http.js";
 
 test("isBlockedHost blocks loopback/private/link-local/metadata", () => {
   for (const host of ["localhost", "127.0.0.1", "0.0.0.0", "10.0.0.5", "172.16.9.9", "192.168.1.1", "169.254.169.254", "::1", "[::1]", "fe80::1", "fd00::1", "::ffff:127.0.0.1"]) {

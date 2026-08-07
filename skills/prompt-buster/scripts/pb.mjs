@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { runCli } from "../lib/commands/index.js";
+import { runCli } from "./lib/commands/index.js";
 
 const nodeMajor = Number(process.versions.node.split(".")[0]);
 if (Number.isFinite(nodeMajor) && nodeMajor < 18) {

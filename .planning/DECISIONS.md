@@ -92,8 +92,32 @@ model." ON-by-default reduces escalation noise (the main reason users disable
 security tools) while never being load-bearing for safety: with no provider,
 flagged content still escalates.
 
+**D-24. Distribution is the skills CLI (`npx skills add`), not npm. The engine
+moved INSIDE `skills/prompt-buster/`.** (2026-08-07, James's call.)
+Why: the skills CLI installs the skill directory into every supported agent in
+one command, which deletes the entire npm channel's overhead — account, 2FA,
+trusted publishing/OIDC, name squatting, a publish workflow, and semver release
+choreography. Making the repo public becomes the release. Consequences, all
+implemented: the engine (`scripts/`) and the LightGBM model + corpus
+(`assets/`) had to move inside the skill, because the skills CLI copies only
+the skill directory; all runtime path resolution moved from `packageRoot()` to
+`skillRoot()`/`assetsDir()`/`cliEntryPath()`; the version is mirrored into a
+generated `version-info.js` (the skill can't read `package.json`); every MCP
+registration snippet now uses an absolute `node <pb.mjs> mcp` instead of
+`npx -y prompt-buster mcp`; `package.json` is `private: true` and dev-only.
+The Claude Code plugin channel is KEPT — it costs nothing (the wrapper points
+into the same skill) and is the one-command enforced-hooks path for Claude
+users. Rejected: publishing to npm *as well* — two channels to keep in sync for
+no user-visible gain, since the skills CLI covers every target harness.
+NEW HAZARD this created, and its fix: after a skills-CLI install the skill
+already lives in the agent's skills dir, so `install --<harness>` would have
+copied the skill onto itself — `copySkill` does rm-then-copy, which would have
+deleted the running source. `isSelf()` detects and skips this (regression test:
+"installing into the skill's own location does not delete it").
+
 **D-10. Names: npm package `prompt-buster`, bin `prompt-buster`, MCP tools
-`pb_*`, config dir `~/.prompt-buster/`.**
+`pb_*`, config dir `~/.prompt-buster/`.** (Superseded in part by D-24: no npm
+package; the skill name, MCP tool prefix, and config dir are unchanged.)
 Why: matches the repo James created; unscoped name probed unclaimed
 2026-07-12; single bin per the GSD secondary-bin lesson; `pb_` is short and
 collision-unlikely in tool namespaces. Scoped fallback documented.

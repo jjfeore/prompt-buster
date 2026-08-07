@@ -54,7 +54,23 @@ export function ensureDir(dir, { mode = 0o700 } = {}) {
   return dir;
 }
 
-/** Root of the installed package (for vendored models, skills, hooks). */
-export function packageRoot() {
-  return fileURLToPath(new URL("..", import.meta.url));
+/**
+ * Root of the installed SKILL directory — the unit that `npx skills add`
+ * copies into each agent's skills dir. This file lives at
+ * <skillRoot>/scripts/lib/paths.js, so the skill root is two levels up.
+ * Everything the engine needs at runtime (scripts/, assets/) sits under it,
+ * which is what lets the skill work standalone after a skills-CLI install.
+ */
+export function skillRoot() {
+  return fileURLToPath(new URL("../..", import.meta.url));
+}
+
+/** Vendored, ships-with-the-skill assets (models, corpus). */
+export function assetsDir() {
+  return path.join(skillRoot(), "assets");
+}
+
+/** Absolute path to the CLI entry point (used for hooks/MCP registration). */
+export function cliEntryPath() {
+  return path.join(skillRoot(), "scripts", "pb.mjs");
 }

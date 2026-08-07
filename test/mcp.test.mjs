@@ -8,8 +8,8 @@ import { PassThrough } from "node:stream";
 const home = mkdtempSync(path.join(tmpdir(), "pb-mcp-"));
 process.env.PROMPT_BUSTER_HOME = home;
 
-const { startMcpServer } = await import("../lib/mcp/server.js");
-const { defaultConfig } = await import("../lib/config.js");
+const { startMcpServer } = await import("../skills/prompt-buster/scripts/lib/mcp/server.js");
+const { defaultConfig } = await import("../skills/prompt-buster/scripts/lib/config.js");
 
 /** Drive the stdio server with scripted JSON-RPC and collect responses. */
 async function rpc(messages, config) {

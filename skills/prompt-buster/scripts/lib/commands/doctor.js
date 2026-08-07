@@ -4,7 +4,7 @@ import path from "node:path";
 import { parseCommandArgs } from "../args.js";
 import { emit, outputMode } from "../output.js";
 import { loadConfig } from "../config.js";
-import { pbHome, runtimeDir, wolfModelDir, packageRoot } from "../paths.js";
+import { pbHome, runtimeDir, wolfModelDir, assetsDir } from "../paths.js";
 import { readDaemonInfo, pingDaemon } from "../engine/daemon.js";
 import { pkgVersion } from "./version.js";
 
@@ -41,7 +41,7 @@ export async function run(argv) {
 }
 
 function lightgbmStatus() {
-  const model = path.join(packageRoot(), "models", "lightgbm", "model.txt");
+  const model = path.join(assetsDir(), "models", "lightgbm", "model.txt");
   return { available: existsSync(model), model };
 }
 

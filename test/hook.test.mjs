@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { extractToolContent } from "../lib/commands/scan-hook.js";
+import { extractToolContent } from "../skills/prompt-buster/scripts/lib/commands/scan-hook.js";
 
 test("extracts WebFetch markdown string", () => {
   const { text, url } = extractToolContent({

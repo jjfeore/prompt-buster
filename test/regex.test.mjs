@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { check, isTypoglycemiaVariant, decodeBase64Candidates, decodeHexCandidates, collapseCharacterSpacedText } from "../lib/engine/filters/regex.js";
+import { check, isTypoglycemiaVariant, decodeBase64Candidates, decodeHexCandidates, collapseCharacterSpacedText } from "../skills/prompt-buster/scripts/lib/engine/filters/regex.js";
 
 const baseConfig = { prefilters: { minChars: 12 }, filters: { regex: { disabled: [], custom: [] } } };
 

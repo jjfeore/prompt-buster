@@ -23,7 +23,8 @@ import lightgbm as lgb
 import numpy as np
 
 REPO = Path(__file__).resolve().parents[2]
-MODEL_DIR = REPO / "models" / "lightgbm"
+SKILL = REPO / "skills" / "prompt-buster"
+MODEL_DIR = SKILL / "assets" / "models" / "lightgbm"
 
 # --- verbatim from prompt_lightgbm.py ---
 _ROLE_RE = re.compile(r"(?i)(^|\n|\[|<)\s*(system|developer|assistant|tool|function|user)\s*[:>\]]")

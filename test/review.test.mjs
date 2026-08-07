@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseVerdict, reviewWindows, resolveProvider, runReview, _clearProbeCache } from "../lib/engine/review.js";
+import { parseVerdict, reviewWindows, resolveProvider, runReview, _clearProbeCache } from "../skills/prompt-buster/scripts/lib/engine/review.js";
 
 test("parseVerdict accepts clean allow/escalate JSON", () => {
   assert.deepEqual(parseVerdict('{"verdict":"allow","confidence":0.9,"reason":"benign doc"}'), {
@@ -124,10 +124,10 @@ async function runReviewWithStub(verdict) {
     json: async () => ({ choices: [{ message: { content: `{"verdict":"${verdict}","confidence":0.9,"reason":"stub"}` } }] }),
   });
   // Re-import with a deps-injected provider is not exposed; instead call the API path directly.
-  const { resolveProvider: resolve } = await import("../lib/engine/review.js");
+  const { resolveProvider: resolve } = await import("../skills/prompt-buster/scripts/lib/engine/review.js");
   const provider = await resolve({ provider: "openai-api", model: "m" }, {}, { fetch: fakeFetch });
   process.env.OPENAI_API_KEY = "test-key";
   const raw = await provider.call({ system: "s", user: "u", config: { timeoutMs: 1000, baseUrl: "https://api.openai.com/v1" } });
-  const { parseVerdict: parse } = await import("../lib/engine/review.js");
+  const { parseVerdict: parse } = await import("../skills/prompt-buster/scripts/lib/engine/review.js");
   return { ran: true, verdict: parse(raw).verdict };
 }

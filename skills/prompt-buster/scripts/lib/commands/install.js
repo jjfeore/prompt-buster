@@ -1,9 +1,9 @@
-import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, statSync, readdirSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import { parseCommandArgs } from "../args.js";
 import { emit, outputMode, EXIT } from "../output.js";
-import { packageRoot, installManifestPath, ensureDir } from "../paths.js";
+import { skillRoot, cliEntryPath, installManifestPath, ensureDir } from "../paths.js";
 import { pkgVersion } from "./version.js";
 
 /**
@@ -48,7 +48,25 @@ export async function run(argv, { command } = {}) {
 }
 
 function skillSource() {
-  return path.join(packageRoot(), "skills", "prompt-buster");
+  return skillRoot();
+}
+
+/**
+ * True when a destination IS the running skill (or contains it). After
+ * `npx skills add`, the skill already lives in the agent's skills dir, so
+ * copying it there again would rmSync its own source. Detect and skip.
+ */
+function isSelf(destDir) {
+  try {
+    const src = path.resolve(realpathSync(skillSource()));
+    const dest = path.resolve(existsSync(destDir) ? realpathSync(destDir) : destDir);
+    if (src === dest) return true;
+    // Also refuse when the destination is an ancestor of the source.
+    const rel = path.relative(dest, src);
+    return rel !== "" && !rel.startsWith("..") && !path.isAbsolute(rel);
+  } catch {
+    return false;
+  }
 }
 
 function harnessSkillDirs(target, scope) {
@@ -163,6 +181,9 @@ function uninstallTarget(target, scope) {
 const MANAGED_MARKER = "prompt-buster";
 
 function copySkill(destDir, force) {
+  // Installed via `npx skills add`? Then this destination already holds the
+  // running skill — copying would delete our own source. Nothing to do.
+  if (isSelf(destDir)) return null;
   if (existsSync(destDir)) {
     // Ours if it contains our SKILL.md; otherwise foreign.
     const skillFile = path.join(destDir, "SKILL.md");
@@ -177,7 +198,7 @@ function copySkill(destDir, force) {
 }
 
 function copyHermesShim(destDir, force) {
-  const src = path.join(packageRoot(), "integrations", "hermes");
+  const src = path.join(skillRoot(), "scripts", "integrations", "hermes");
   if (existsSync(destDir)) {
     const initFile = path.join(destDir, "__init__.py");
     if (!existsSync(initFile) || !readFileSync(initFile, "utf-8").includes("PromptBuster shim")) {
@@ -189,7 +210,7 @@ function copyHermesShim(destDir, force) {
   cpSync(src, destDir, { recursive: true });
   // Bake the absolute CLI path into the shim so it works regardless of PATH.
   const initFile = path.join(destDir, "__init__.py");
-  const cliPath = path.join(packageRoot(), "bin", "prompt-buster.mjs");
+  const cliPath = cliEntryPath();
   const patched = readFileSync(initFile, "utf-8").replace(
     'PROMPT_BUSTER_CLI = os.environ.get("PROMPTBUSTER_CLI", "prompt-buster")',
     `PROMPT_BUSTER_CLI = os.environ.get("PROMPTBUSTER_CLI", ${JSON.stringify(cliPath)})`,
@@ -212,7 +233,7 @@ function writeManaged(filePath, content, force) {
 function openCodePluginStub() {
   // Self-contained loader so the plugin works even if the npm package layout
   // isn't resolvable from the OpenCode plugins dir.
-  const enginePath = path.join(packageRoot(), "integrations", "opencode", "index.js");
+  const enginePath = path.join(skillRoot(), "scripts", "integrations", "opencode", "index.js");
   return `// prompt-buster OpenCode plugin (managed by: prompt-buster install --opencode)\n` + `export { PromptBusterPlugin as default } from ${JSON.stringify(enginePath.replace(/\\/g, "/"))};\n`;
 }
 
@@ -239,20 +260,56 @@ function recordManifest(target, scope, paths) {
 
 // --- config snippets shown to the user (they choose to apply) ---
 
+// The skill is distributed via `npx skills add`, not npm, so every MCP
+// registration points at this skill's own CLI by absolute path.
+function mcpCommand() {
+  return { command: process.execPath, args: [cliEntryPath(), "mcp"] };
+}
+
 function claudeSnippet() {
-  return "Claude Code: for enforced interception, install the plugin instead —\n  /plugin marketplace add jjfeore/prompt-buster\n  /plugin install prompt-buster@prompt-buster";
+  const { command, args } = mcpCommand();
+  return (
+    "Claude Code: the PostToolUse hook + MCP server are registered in\n" +
+    "  ~/.claude/settings.json (enforced interception is now active).\n" +
+    "Alternatively install the repo as a plugin:\n" +
+    "  /plugin marketplace add jjfeore/prompt-buster\n" +
+    "  /plugin install prompt-buster@prompt-buster\n" +
+    `MCP command: ${command} ${args.join(" ")}`
+  );
 }
 function codexSnippet() {
-  return "Codex: add to ~/.codex/config.toml (native web_search is not hookable):\n  web_search = \"disabled\"\n  [mcp_servers.prompt-buster]\n  command = \"npx\"\n  args = [\"-y\", \"prompt-buster\", \"mcp\"]";
+  const { command, args } = mcpCommand();
+  return (
+    "Codex: add to ~/.codex/config.toml (native web_search is not hookable):\n" +
+    '  web_search = "disabled"\n' +
+    "  [mcp_servers.prompt-buster]\n" +
+    `  command = ${JSON.stringify(command)}\n` +
+    `  args = ${JSON.stringify(args)}`
+  );
 }
 function openclawSnippet() {
-  return "OpenClaw: add to openclaw.json:\n  {\"tools\":{\"web\":{\"search\":{\"enabled\":false},\"fetch\":{\"enabled\":false}}},\n   \"mcp\":{\"servers\":{\"prompt-buster\":{\"command\":\"npx\",\"args\":[\"-y\",\"prompt-buster\",\"mcp\"]}}}}";
+  const { command, args } = mcpCommand();
+  return (
+    "OpenClaw: add to openclaw.json:\n" +
+    '  {"tools":{"web":{"search":{"enabled":false},"fetch":{"enabled":false}}},\n' +
+    `   "mcp":{"servers":{"prompt-buster":{"command":${JSON.stringify(command)},"args":${JSON.stringify(args)}}}}}`
+  );
 }
 function hermesSnippet() {
-  return "Hermes: enable in ~/.hermes/config.yaml:\n  plugins:\n    enabled: [prompt-buster]\n  mcp_servers:\n    prompt-buster: { command: \"npx\", args: [\"-y\", \"prompt-buster\", \"mcp\"] }";
+  const { command, args } = mcpCommand();
+  return (
+    "Hermes: enable in ~/.hermes/config.yaml:\n" +
+    "  plugins:\n    enabled: [prompt-buster]\n" +
+    "  mcp_servers:\n" +
+    `    prompt-buster: { command: ${JSON.stringify(command)}, args: ${JSON.stringify(args)} }`
+  );
 }
 function opencodeSnippet() {
-  return "OpenCode: the plugin file is installed. To also register the MCP server, add to opencode.json:\n  \"mcp\":{\"prompt-buster\":{\"type\":\"local\",\"command\":[\"npx\",\"-y\",\"prompt-buster\",\"mcp\"],\"enabled\":true}}";
+  const { command, args } = mcpCommand();
+  return (
+    "OpenCode: the plugin file is installed. To also register the MCP server, add to opencode.json:\n" +
+    `  "mcp":{"prompt-buster":{"type":"local","command":${JSON.stringify([command, ...args])},"enabled":true}}`
+  );
 }
 
 function renderResults(command, results) {

@@ -13,6 +13,7 @@
  */
 
 import { execFile } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 const WEB_TOOLS = new Set(["webfetch", "web_fetch", "websearch", "web_search", "fetch"]);
 
@@ -89,6 +90,7 @@ function scan(text, source) {
 }
 
 function resolveCliPath() {
-  // This file lives at <pkg>/integrations/opencode/index.js.
-  return new URL("../../bin/prompt-buster.mjs", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
+  // This file lives at <skillRoot>/scripts/integrations/opencode/index.js,
+  // so the CLI entry is two levels up.
+  return fileURLToPath(new URL("../../pb.mjs", import.meta.url));
 }

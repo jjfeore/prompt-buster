@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { extractText, decodeEntities, toScannableText } from "../lib/engine/extract.js";
+import { extractText, decodeEntities, toScannableText } from "../skills/prompt-buster/scripts/lib/engine/extract.js";
 
 test("extracts visible text and drops scripts/styles", () => {
   const html = "<html><head><style>.x{color:red}</style><script>alert(1)</script></head><body><p>Hello world</p></body></html>";
