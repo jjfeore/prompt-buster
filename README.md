@@ -22,6 +22,19 @@ pipeline before the agent ever acts on it.
 
 ## How it works
 
+PromptBuster is made to pass untrusted content through a series of configurable
+checks of increasing complexity. To begin, all the content is run through 1-3
+pre-filter stages that are all designed to run locally on CPU. Depending on
+your risk tolerance, you can define the confidence threshold for those filters
+to trigger escalation. Once a pre-filter is triggered, the content is then
+sent to a configured LLM that is prompted to review the content for prompt
+injection specifically. Although an injection attack might fool a smarter model
+when consumed as part of a much larger operation or in an expanded context,
+even a lightweight LLM can easily recognize injection attacks when provided a
+smaller context to examine and given the task to act as a strong classifier.
+The escalation model then returns a verdict on whether the content should be
+blocked, flagged, or marked as safe.
+
 ```
 web content ─▶ ①ingress ─▶ ②pre-filters ─▶ ③LLM review ─▶ ④escalation ─▶ agent
                 (hook/MCP/CLI)  (regex,        (optional,     (block, allow
@@ -34,8 +47,8 @@ web content ─▶ ①ingress ─▶ ②pre-filters ─▶ ③LLM review ─▶ 
 2. **Pre-filters** (configurable) — a fast, layered scan:
    - **regex** *(default on)* — a deterministic catalogue of injection patterns
      plus evasion decoding (base64/hex, character-spacing, typoglycemia).
-   - **LightGBM** — a trained classifier, pure-JS, no download (the
-     low-resource option).
+   - **LightGBM** — a lightweight, custom classifier that runs on CPU, pure-JS,
+     no download (the low-resource option).
    - **Wolf Defender** *(default on)* — a robust ModernBERT classifier
      (`prompt-buster setup wolf` to enable local inference, or point it at a
      service).
