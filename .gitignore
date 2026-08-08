@@ -2,3 +2,5 @@ node_modules/
 *.tgz
 .venv/
 __pycache__/
+MIGRATION.md
+.planning
